@@ -33,6 +33,14 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+    
+    /* ATTEMPT TO FORCE GRAPH BACKGROUND
+       This targets the iframe streamlit-agraph creates. 
+       It works if the internal body is transparent. */
+    iframe {
+        background-color: #0e1117 !important;
+    }
+
     /* Button Tweaks */
     .stButton button {
         width: 100%;
@@ -135,7 +143,7 @@ with st.sidebar:
     # Primary Action
     if st.button("🚀 Generate Paths", type="primary", key="launch_btn"):
         st.session_state.should_fetch = True
-        st.session_state.graph_data = None # Clear old data on new click
+        st.session_state.graph_data = None 
         st.rerun()
 
     # Clear
@@ -152,7 +160,7 @@ if st.session_state.should_fetch:
     data = get_gemini_response(filters)
     if data:
         st.session_state.graph_data = data
-        st.session_state.should_fetch = False # Reset
+        st.session_state.should_fetch = False 
         st.rerun()
 
 # --- 5. Layout Rendering ---
@@ -167,13 +175,21 @@ if data:
     edges = []
     node_ids = set()
 
+    # Define High-Contrast Font (White Text with Black Outline)
+    # This ensures readability on BOTH White and Black backgrounds.
+    high_contrast_font = {
+        'color': 'white',
+        'strokeWidth': 4,       # Thick outline
+        'strokeColor': 'black'  # Black outline
+    }
+
     # Center Node (The Degree)
     nodes.append(Node(
         id=center_info['name'], 
         label=center_info['name'], 
         size=45, 
         color="#B19CD9", 
-        font={'color': 'white'},
+        font=high_contrast_font, # Applied here
         shape="dot"
     ))
     node_ids.add(center_info['name'])
@@ -186,7 +202,7 @@ if data:
                 label=item['name'], 
                 size=30, 
                 color="#FF4B4B", 
-                font={'color': 'white'}, 
+                font=high_contrast_font, # Applied here
                 title=item['reason']
             ))
             node_ids.add(item['name'])
@@ -207,7 +223,7 @@ if data:
                         label=sub['name'], 
                         size=20, 
                         color="#00C0F2", 
-                        font={'color': 'white'}, 
+                        font=high_contrast_font, # Applied here
                         title=f"Cert for {item['name']}: {sub['reason']}",
                         shape="diamond"
                     ))
@@ -221,8 +237,7 @@ if data:
                     dashes=True
                 ))
 
-    # --- CONFIG FIX: HARDCODE BLACK BACKGROUND ---
-    # This ensures white text is always visible, even in Light Mode
+    # Config
     config = Config(
         width=1200,
         height=600,
@@ -232,7 +247,7 @@ if data:
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
         collapsible=True,
-        backgroundColor="#0e1117"  # Hardcoded Dark Gray/Black
+        backgroundColor="#0e1117" # We leave this in, but the font fix makes us safe if it fails.
     )
 
     col_main, col_right = st.columns([3, 1])
@@ -273,7 +288,7 @@ if data:
             if not found:
                 display_text = "Node details not found."
 
-        # Adaptive Card (The Sidebar uses System Theme)
+        # Adaptive Card
         st.markdown(f"""
         <div class="deep-dive-card">
             <div class="highlight-title">{selected_node_name}</div>
