@@ -135,9 +135,7 @@ def get_gemini_response(filters):
 # --- 3. Sidebar Controls ---
 with st.sidebar:
     st.title("Purdue AI Policy Mapper")
-    st.markdown("Explore broad career trajectories and the certifications that could support them.")
-    st.markdown("Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research!")
-
+    st.markdown("Explore broad career trajectories and the certifications that could support them. Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research!")
     st.divider()
     
     # Hunter Filters
