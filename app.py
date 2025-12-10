@@ -128,15 +128,16 @@ def get_gemini_response(filters):
 
 # --- 3. Sidebar Controls ---
 with st.sidebar:
-    st.title("Purdue AI Policy Mapper")
+    st.title("Masters of AI Career Mapper")
     
     # --- TABS FOR ORGANIZATION ---
     tab_main, tab_about = st.tabs(["🚀 Controls", "ℹ️ About"])
     
     # --- TAB 1: MAIN CONTROLS ---
     with tab_main:
-        st.markdown("Generate broad career trajectories and the certifications that support them.")
-        st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
+        st.markdown("This is a free to use tool, that helps fellow MSAI Boilermakers investigate possible career trajectories and the certifications that support them.")
+        st.markdown("This tool uses GEMINI and may have errors, but should spark your own research.")
+         st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
         
         st.divider()
         
@@ -166,12 +167,13 @@ with st.sidebar:
         st.divider()
         st.caption("Session Monitor")
         st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
+        st.caption("Donations appreciated, see About Tab")
 
     # --- TAB 2: ABOUT & LINKS ---
     with tab_about:
         st.subheader("About the Creator")
         st.markdown("""
-        Built by **Pete Trujillo** to help Purdue students visualize career possibilities beyond standard paths.
+        Built by **Pete Trujillo** to help help fellow MSAI students visualize career possibilities beyond standard paths.
         """)
         
         st.markdown("### 🌐 Connect")
