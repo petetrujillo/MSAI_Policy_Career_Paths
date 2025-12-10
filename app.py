@@ -34,9 +34,7 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     
-    /* ATTEMPT TO FORCE GRAPH BACKGROUND
-       This targets the iframe streamlit-agraph creates. 
-       It works if the internal body is transparent. */
+    /* ATTEMPT TO FORCE GRAPH BACKGROUND */
     iframe {
         background-color: #0e1117 !important;
     }
@@ -53,6 +51,8 @@ if 'graph_data' not in st.session_state:
     st.session_state.graph_data = None
 if 'token_usage' not in st.session_state:
     st.session_state.token_usage = 0
+if 'session_cost' not in st.session_state:
+    st.session_state.session_cost = 0.0  # Initialize Cost Tracker
 if 'should_fetch' not in st.session_state:
     st.session_state.should_fetch = False
 
@@ -113,9 +113,11 @@ def get_gemini_response(filters):
         with st.spinner(f"🔍 Mapping Career Trajectories..."):
             response = model.generate_content(system_instruction)
         
+        # Track Tokens & Cost
         input_tokens = len(system_instruction) / 4
         output_tokens = len(response.text) / 4
         st.session_state.token_usage += (input_tokens + output_tokens)
+        st.session_state.session_cost += 0.003  # Fixed cost increment per query
 
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
@@ -149,9 +151,27 @@ with st.sidebar:
     # Clear
     if st.button("🗑️ Clear Map"):
         st.session_state.graph_data = None
-        st.session_state.token_usage = 0
+        # Note: We do NOT reset session_cost here so you can track total spend.
         st.session_state.should_fetch = False
         st.rerun()
+    
+    # --- COST TRACKER ---
+    st.divider()
+    st.caption("Session Monitor")
+    st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
+
+    # --- BUY ME A COFFEE LINK ---
+    st.divider()
+    st.markdown(
+        """
+        <div style="text-align: center;">
+            <a href="https://buymeacoffee.com/petetru" target="_blank">
+                <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 162px !important;" >
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # --- 4. Main Logic ---
 filters = {"industry": f_industry, "style": f_style}
@@ -176,11 +196,10 @@ if data:
     node_ids = set()
 
     # Define High-Contrast Font (White Text with Black Outline)
-    # This ensures readability on BOTH White and Black backgrounds.
     high_contrast_font = {
         'color': 'white',
-        'strokeWidth': 4,       # Thick outline
-        'strokeColor': 'black'  # Black outline
+        'strokeWidth': 4,       
+        'strokeColor': 'black'  
     }
 
     # Center Node (The Degree)
@@ -189,7 +208,7 @@ if data:
         label=center_info['name'], 
         size=45, 
         color="#B19CD9", 
-        font=high_contrast_font, # Applied here
+        font=high_contrast_font, 
         shape="dot"
     ))
     node_ids.add(center_info['name'])
@@ -202,7 +221,7 @@ if data:
                 label=item['name'], 
                 size=30, 
                 color="#FF4B4B", 
-                font=high_contrast_font, # Applied here
+                font=high_contrast_font, 
                 title=item['reason']
             ))
             node_ids.add(item['name'])
@@ -223,7 +242,7 @@ if data:
                         label=sub['name'], 
                         size=20, 
                         color="#00C0F2", 
-                        font=high_contrast_font, # Applied here
+                        font=high_contrast_font, 
                         title=f"Cert for {item['name']}: {sub['reason']}",
                         shape="diamond"
                     ))
@@ -247,7 +266,7 @@ if data:
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
         collapsible=True,
-        backgroundColor="#0e1117" # We leave this in, but the font fix makes us safe if it fails.
+        backgroundColor="#0e1117" 
     )
 
     col_main, col_right = st.columns([3, 1])
