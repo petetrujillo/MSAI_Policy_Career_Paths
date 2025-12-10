@@ -70,7 +70,6 @@ def get_gemini_response(filters):
     genai.configure(api_key=api_key)
 
     # --- DYNAMIC PROMPT LOGIC BASED ON TRACK ---
-    # We define the "Persona" but let the AI generate the specific Roles/Certs
     if filters['track'] == "AI Management & Policy":
         program_context = """
         DEGREE PROFILE: 'AI Management & Policy' Track.
@@ -101,9 +100,9 @@ def get_gemini_response(filters):
     TASK:
     1. CENTER NODE: "{center_node_name}"
     2. LAYER 1 (Job Titles): GENERATE 5 distinct job titles that fit the "{filters['track']}" profile within the {filters['industry']} industry.
-       - BE CREATIVE: Look for modern, emerging titles (e.g., "AI Audit Manager" or "ML Ops Engineer") not just generic ones.
+       - BE CREATIVE: Look for modern, emerging titles (e.g., "AI Audit Manager" or "ML Ops Engineer").
     3. LAYER 2 (Certifications): For EACH job title, GENERATE 2-3 specific, high-value certifications that would help a candidate land THAT specific job.
-       - CRITICAL: The certifications must be relevant to the specific job node (e.g., PMP for a PM role, AWS Machine Learning for a Dev role).
+       - CRITICAL: The certifications must be relevant to the specific job node.
 
     OUTPUT JSON STRUCTURE:
     {{
@@ -148,64 +147,56 @@ def get_gemini_response(filters):
 with st.sidebar:
     st.title("Purdue AI Career Mapper")
     
-    tab_main, tab_about = st.tabs(["🚀 Controls", "ℹ️ About"])
+    # --- UPDATED TABS: Added Model Card ---
+    tab_main, tab_about, tab_model = st.tabs(["🚀 Controls", "ℹ️ About", "🧠 Model Card"])
     
+    # --- TAB 1: CONTROLS ---
     with tab_main:
-        st.markdown("This tool is designed to explore possible career paths customized to your specific Master's track. Additionally this tool recommends certifications that will possibly enhance your expertise")
-        st.markdown("Note: This is generated using Gemini, so there may be errors.")
-        
+        st.markdown("Generate career paths customized to your specific Master's track.")
         st.divider()
         
-        # --- NEW: DEGREE TRACK SELECTION ---
         st.subheader("🎓 Degree Track")
         f_track = st.radio("Select your specialization:", 
             ["AI Management & Policy", "AI and Machine Learning"],
-            index=0, # Defaults to Management & Policy
+            index=0,
             help="This changes the AI's logic to focus on either Strategy/Governance or Technical/Engineering roles."
         )
         
         st.divider()
-        
-        # Hunter Filters
         st.subheader("🎯 Career Scope")
         f_industry = st.selectbox("Target Sector", 
-            ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Gaming", "Entertainment", "Non-Profit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
+            ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
         
         f_style = st.selectbox("Role Function", 
             ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety", "Engineering & Dev", "Data Science"])
 
         st.divider()
 
-        # Primary Action
         if st.button("🚀 Generate Paths", type="primary", key="launch_btn"):
             st.session_state.should_fetch = True
             st.session_state.graph_data = None 
             st.rerun()
 
-        # Clear
         if st.button("🗑️ Clear Map"):
             st.session_state.graph_data = None
             st.session_state.should_fetch = False
             st.rerun()
         
-        # Cost Tracker
         st.divider()
         st.caption("Session Monitor")
-        st.caption("This tool is free to use, but donations are appreciated (See About Tab)")
         st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
 
+    # --- TAB 2: ABOUT ---
     with tab_about:
         st.subheader("About the Creator")
-        st.markdown("""
-        Built by **Pete Trujillo** to help Purdue students visualize career possibilities beyond standard paths.
-        """)
+        st.markdown("Built by **Pete Trujillo** to help Purdue students visualize career possibilities beyond standard paths.")
         
         st.markdown("### 🌐 Connect")
         st.link_button("🏠 PeteTrujillo.com", "https://petetrujillo.com")
         st.link_button("🍀 DoubleLucky.ai (Non-Profit)", "https://doublelucky.ai")
+        st.link_button("🐙 GitHub Repo", "https://github.com/petetrujillo/MSAI_Policy_Career_Paths")
         
         st.divider()
-        
         st.markdown("### ☕ Support the Project")
         st.markdown(
             """
@@ -217,6 +208,36 @@ with st.sidebar:
             """,
             unsafe_allow_html=True
         )
+
+    # --- TAB 3: MODEL CARD ---
+    with tab_model:
+        st.subheader("🧠 Model Card")
+        st.caption("Transparency on how this tool works.")
+        
+        st.markdown("""
+        **Project:** Purdue AI Career Mapper  
+        **Model Engine:** Google Gemini 1.5 Flash  
+        **Purpose:** To map academic degrees to industry roles and required certifications.
+
+        #### 🎯 Intended Use
+        * **Primary Users:** Students/Alumni of Purdue MS in AI.
+        * **Goal:** Career exploration and strategic planning.
+        * **Mechanism:** Generates a 3-layer knowledge graph (Degree → Jobs → Certifications).
+
+        #### ⚙️ How It Works
+        The model uses two distinct "System Personas" based on your selected track:
+
+        | Track | **Management & Policy** | **AI & Machine Learning** |
+        | :--- | :--- | :--- |
+        | **Persona** | Strategic Leader, Governance Expert | Technical Builder, Data Scientist |
+        | **Focus** | Bridging business & tech, Ethics, Risk | Coding, Model Deployment, Math |
+        | **Output** | Roles like *AI Ethics Officer*, *PM* | Roles like *ML Ops Engineer*, *Dev* |
+
+        #### ⚠️ Limitations
+        * **Hallucination Risk:** AI may occasionally suggest deprecated certifications.
+        * **Knowledge Cutoff:** Suggestions are based on the model's training data cutoff.
+        * **Advisory:** Always verify exam requirements (costs, prerequisites) independently. This tool is for **exploration**, not financial advice.
+        """)
 
 # --- 4. Main Logic ---
 filters = {"industry": f_industry, "style": f_style, "track": f_track}
