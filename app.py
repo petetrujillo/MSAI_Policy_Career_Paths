@@ -12,19 +12,15 @@ st.set_page_config(layout="wide", page_title="Purdue AI Policy Career Mapper")
 # --- CSS for Styling ---
 st.markdown("""
 <style>
-    /* FORCE GLOBAL BLACK BACKGROUND */
-    .stApp {
-        background-color: #000000;
-        color: #FAFAFA; /* Ensures text is visible */
-    }
-
-    /* Card Styling */
+    /* ADAPTIVE CARD STYLING 
+       Uses Streamlit's native CSS variables to switch between Light/Dark modes automatically.
+    */
     .deep-dive-card {
-        background-color: #262730;
+        background-color: var(--secondary-background-color);
+        color: var(--text-color);
         padding: 15px;
         border-radius: 10px;
-        border: 1px solid #4B4B4B;
-        color: #FAFAFA;
+        border: 1px solid rgba(128, 128, 128, 0.2);
         height: 100%;
     }
     .deep-dive-card p {
@@ -38,15 +34,6 @@ st.markdown("""
         font-size: 1.0em;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-    }
-    .warning-box {
-        background-color: #2d2222;
-        border-left: 5px solid #ff4b4b;
-        padding: 15px;
-        border-radius: 5px;
-        color: #ffcfcf;
-        font-size: 0.9em;
-        margin-bottom: 20px;
     }
     /* Button Tweaks */
     .stButton button {
@@ -106,10 +93,10 @@ def get_gemini_response(filters):
         "connections": [
             {{
                 "name": "Job Title A",
-                "reason": "Why is this a good fit? (e.g., 'Uses your ethics background to manage product risk')",
+                "reason": "Why is this a good fit?",
                 "sub_connections": [
-                    {{"name": "Certification X", "reason": "Why this specific cert? (e.g., 'Proves you know the privacy laws')"}},
-                    {{"name": "Certification Y", "reason": "Why this specific cert? (e.g., 'Proves technical competency')"}}
+                    {{"name": "Certification X", "reason": "Why this specific cert?"}},
+                    {{"name": "Certification Y", "reason": "Why this specific cert?"}}
                 ]
             }}
         ]
@@ -238,7 +225,7 @@ if data:
                     dashes=True
                 ))
 
-    # --- CONFIG UPDATE HERE ---
+    # --- CONFIG UPDATED: REMOVED BACKGROUND COLOR ---
     config = Config(
         width=1200,
         height=600,
@@ -247,14 +234,18 @@ if data:
         hierarchical=False, 
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
-        collapsible=True,
-        backgroundColor="#000000"  # <--- This fixes the white box
+        collapsible=True
+        # backgroundColor is removed so it inherits default (often white/transparent)
     )
 
     col_main, col_right = st.columns([3, 1])
     
     with col_main:
         st.subheader(f"Career Map: {filters['industry']}")
+        
+        # Native Streamlit Warning (Adaptive)
+        st.warning("⚠️ **AI Generated Advisory:** Verify all role availability and requirements independently.")
+        
         clicked_node = agraph(nodes=nodes, edges=edges, config=config)
 
     # --- RIGHT COLUMN: Details ---
@@ -288,10 +279,14 @@ if data:
             if not found:
                 display_text = "Node details not found."
 
-        st.info(f"**{selected_node_name}**")
-        st.write(display_text)
-        if display_sub:
-            st.markdown(f"_{display_sub}_")
+        # Adaptive Card using new CSS
+        st.markdown(f"""
+        <div class="deep-dive-card">
+            <div class="highlight-title">{selected_node_name}</div>
+            <p>{display_text}</p>
+            <p><i>{display_sub}</i></p>
+        </div>
+        """, unsafe_allow_html=True)
             
         st.divider()
         if selected_node_name != center_info['name']:
@@ -304,6 +299,6 @@ else:
     <div style="text-align: center; padding: 50px;">
         <h1>🎓 Welcome, Purdue Graduates</h1>
         <p>Select your target industry and preferred role function on the left.</p>
-        <p style="font-size: 0.9em; color: #888;">We will map diverse career paths and the specific certifications you need to be credible in them.</p>
+        <p style="font-size: 0.9em; color: gray;">We will map diverse career paths and the specific certifications you need to be credible in them.</p>
     </div>
     """, unsafe_allow_html=True)
