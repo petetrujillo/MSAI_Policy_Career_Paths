@@ -151,7 +151,8 @@ with st.sidebar:
     tab_main, tab_about = st.tabs(["🚀 Controls", "ℹ️ About"])
     
     with tab_main:
-        st.markdown("Generate career paths customized to your specific Master's track.")
+        st.markdown("This tool is designed to explore possible career paths customized to your specific Master's track. Additionally this tool recommends certifications that will possibly enhance your expertise")
+        st.markdown("Note: This is generated using Gemini, so there may be errors.")
         
         st.divider()
         
@@ -190,6 +191,7 @@ with st.sidebar:
         # Cost Tracker
         st.divider()
         st.caption("Session Monitor")
+        st.caption("This tool is free to use, but donations are appreciated (See About Tab)")
         st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
 
     with tab_about:
