@@ -7,7 +7,7 @@ import google.generativeai as genai
 from streamlit_agraph import agraph, Node, Edge, Config
 
 # --- Page Configuration ---
-st.set_page_config(layout="wide", page_title="Purdue AI Policy Career Mapper")
+st.set_page_config(layout="wide", page_title="Purdue AI Career Mapper")
 
 # --- CSS for Styling ---
 st.markdown("""
@@ -52,7 +52,7 @@ if 'graph_data' not in st.session_state:
 if 'token_usage' not in st.session_state:
     st.session_state.token_usage = 0
 if 'session_cost' not in st.session_state:
-    st.session_state.session_cost = 0.0  # Initialize Cost Tracker
+    st.session_state.session_cost = 0.0
 if 'should_fetch' not in st.session_state:
     st.session_state.should_fetch = False
 
@@ -69,39 +69,58 @@ def get_gemini_response(filters):
 
     genai.configure(api_key=api_key)
 
-    system_instruction = f"""
-    You are a Career Strategist specialized in the "Purdue Masters of AI Policy and Management" program.
-    
-    CONTEXT:
-    The user is a graduate looking for realistic career entry points in: {filters['industry']}.
-    The user is open to roles in: {filters['style']}.
-    
-    CRITICAL INSTRUCTION:
-    - DO NOT limit results to "AI Governance" or "Policy" titles. 
-    - A Master's degree alone is rarely a golden ticket. You must find roles where this degree acts as a specific *differentiator* (e.g., Product Management, Compliance, Strategy, Risk, Technical Sales).
-    - The "Certifications" layer is VITAL. It must answer: "What specific credential makes this Policy grad hireable for this specific hard-skill role?"
+    # --- DYNAMIC PROMPT LOGIC BASED ON TRACK ---
+    # We define the "Persona" but let the AI generate the specific Roles/Certs
+    if filters['track'] == "AI Management & Policy":
+        program_context = """
+        DEGREE PROFILE: 'AI Management & Policy' Track.
+        - GRADUATE PERSONA: Strategic Leader, Governance Expert, Product Visionary.
+        - KEY STRENGTHS: Bridging the gap between technical teams and business goals, Ethics, Policy, Risk Management.
+        - AVOID: Do not suggest purely coding-heavy roles (like Core Developer) unless they have a strategic component.
+        """
+        center_node_name = "Purdue Policy Grad"
+        
+    else: # AI & Machine Learning
+        program_context = """
+        DEGREE PROFILE: 'AI and Machine Learning' Track.
+        - GRADUATE PERSONA: Technical Builder, Model Architect, Data Scientist.
+        - KEY STRENGTHS: Python, TensorFlow, NLP, Computer Vision, building and deploying models.
+        - AVOID: Do not suggest purely non-technical administrative roles.
+        """
+        center_node_name = "Purdue ML Grad"
 
+    system_instruction = f"""
+    You are a Career Strategist specialized in the Purdue Masters of AI program.
+    
+    {program_context}
+    
+    USER CONSTRAINTS:
+    - Target Industry: {filters['industry']}
+    - Preferred Role Function: {filters['style']}
+    
     TASK:
-    1. CENTER NODE: "Purdue AI Policy Grad"
-    2. LAYER 1 (Connections): Identify 5 distinct, broad Job Titles. Mix "Direct" matches (Policy) with "Pivot" matches (e.g. PM, Risk Analyst) suitable for the {filters['industry']} sector.
-    3. LAYER 2 (Sub-connections): For EACH Job Title, identify 2-3 specific Professional Certifications (e.g., CIPP, CISSP, PMP, AWS Certified Practitioner) that provide the hard credibility needed to land that job.
+    1. CENTER NODE: "{center_node_name}"
+    2. LAYER 1 (Job Titles): GENERATE 5 distinct job titles that fit the "{filters['track']}" profile within the {filters['industry']} industry.
+       - BE CREATIVE: Look for modern, emerging titles (e.g., "AI Audit Manager" or "ML Ops Engineer") not just generic ones.
+    3. LAYER 2 (Certifications): For EACH job title, GENERATE 2-3 specific, high-value certifications that would help a candidate land THAT specific job.
+       - CRITICAL: The certifications must be relevant to the specific job node (e.g., PMP for a PM role, AWS Machine Learning for a Dev role).
 
     OUTPUT JSON STRUCTURE:
     {{
         "center_node": {{
-            "name": "Purdue MS AI Policy",
+            "name": "{center_node_name}",
             "type": "Degree",
-            "mission": "Your degree is the foundation, but certifications are your bridge to industry.",
-            "positive_news": "Versatile degree for hybrid roles.",
-            "red_flags": "Requires hard-skill proof (certs) to compete."
+            "mission": "Career Map for the {filters['track']} track in {filters['industry']}.",
+            "positive_news": "Why this degree profile is valuable right now.",
+            "red_flags": "One skill gap to watch out for."
         }},
         "connections": [
             {{
-                "name": "Job Title A",
-                "reason": "Why is this a good fit?",
+                "name": "Generated Job Title",
+                "reason": "Why this fits the degree profile?",
                 "sub_connections": [
-                    {{"name": "Certification X", "reason": "Why this specific cert?"}},
-                    {{"name": "Certification Y", "reason": "Why this specific cert?"}}
+                    {{"name": "Specific Cert A", "reason": "Why this cert?"}},
+                    {{"name": "Specific Cert B", "reason": "Why this cert?"}}
                 ]
             }}
         ]
@@ -110,14 +129,13 @@ def get_gemini_response(filters):
     
     try:
         model = genai.GenerativeModel('gemini-flash-latest')
-        with st.spinner(f"🔍 Mapping Career Trajectories..."):
+        with st.spinner(f"🔍 Analyzing Career Paths for {filters['track']}..."):
             response = model.generate_content(system_instruction)
         
-        # Track Tokens & Cost
         input_tokens = len(system_instruction) / 4
         output_tokens = len(response.text) / 4
         st.session_state.token_usage += (input_tokens + output_tokens)
-        st.session_state.session_cost += 0.003  # Fixed cost increment per query
+        st.session_state.session_cost += 0.003
 
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
@@ -128,16 +146,22 @@ def get_gemini_response(filters):
 
 # --- 3. Sidebar Controls ---
 with st.sidebar:
-    st.title("Masters of AI Career Mapper")
+    st.title("Purdue AI Career Mapper")
     
-    # --- TABS FOR ORGANIZATION ---
     tab_main, tab_about = st.tabs(["🚀 Controls", "ℹ️ About"])
     
-    # --- TAB 1: MAIN CONTROLS ---
     with tab_main:
-        st.markdown("This is a free to use tool, that helps fellow MSAI Boilermakers investigate possible career trajectories and the certifications that support them.")
-        st.markdown("This tool uses GEMINI and may have errors, but should spark your own research.")
-        st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
+        st.markdown("Generate career paths customized to your specific Master's track.")
+        
+        st.divider()
+        
+        # --- NEW: DEGREE TRACK SELECTION ---
+        st.subheader("🎓 Degree Track")
+        f_track = st.radio("Select your specialization:", 
+            ["AI Management & Policy", "AI and Machine Learning"],
+            index=0, # Defaults to Management & Policy
+            help="This changes the AI's logic to focus on either Strategy/Governance or Technical/Engineering roles."
+        )
         
         st.divider()
         
@@ -147,7 +171,7 @@ with st.sidebar:
             ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
         
         f_style = st.selectbox("Role Function", 
-            ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety"])
+            ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety", "Engineering & Dev", "Data Science"])
 
         st.divider()
 
@@ -167,13 +191,11 @@ with st.sidebar:
         st.divider()
         st.caption("Session Monitor")
         st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
-        st.caption("Donations appreciated, see About Tab")
 
-    # --- TAB 2: ABOUT & LINKS ---
     with tab_about:
         st.subheader("About the Creator")
         st.markdown("""
-        Built by **Pete Trujillo** to help help fellow MSAI students visualize career possibilities beyond standard paths.
+        Built by **Pete Trujillo** to help Purdue students visualize career possibilities beyond standard paths.
         """)
         
         st.markdown("### 🌐 Connect")
@@ -195,7 +217,7 @@ with st.sidebar:
         )
 
 # --- 4. Main Logic ---
-filters = {"industry": f_industry, "style": f_style}
+filters = {"industry": f_industry, "style": f_style, "track": f_track}
 
 if st.session_state.should_fetch:
     data = get_gemini_response(filters)
@@ -216,7 +238,7 @@ if data:
     edges = []
     node_ids = set()
 
-    # Define High-Contrast Font (White Text with Black Outline)
+    # Define High-Contrast Font
     high_contrast_font = {
         'color': 'white',
         'strokeWidth': 4,       
@@ -293,7 +315,7 @@ if data:
     col_main, col_right = st.columns([3, 1])
     
     with col_main:
-        st.subheader(f"Career Map: {filters['industry']}")
+        st.subheader(f"Career Map: {filters['track']} in {filters['industry']}")
         st.warning("⚠️ **AI Generated Advisory:** Verify all role availability and requirements independently.")
         clicked_node = agraph(nodes=nodes, edges=edges, config=config)
 
@@ -347,7 +369,7 @@ else:
     st.markdown("""
     <div style="text-align: center; padding: 50px;">
         <h1>🎓 Welcome, Purdue Graduates</h1>
-        <p>Select your target industry and preferred role function on the left.</p>
+        <p>Select your Degree Track and Target Industry on the left.</p>
         <p style="font-size: 0.9em; color: gray;">We will map diverse career paths and the specific certifications you need to be credible in them.</p>
     </div>
     """, unsafe_allow_html=True)
