@@ -12,6 +12,12 @@ st.set_page_config(layout="wide", page_title="Purdue AI Policy Career Mapper")
 # --- CSS for Styling ---
 st.markdown("""
 <style>
+    /* FORCE GLOBAL BLACK BACKGROUND */
+    .stApp {
+        background-color: #000000;
+        color: #FAFAFA; /* Ensures text is visible */
+    }
+
     /* Card Styling */
     .deep-dive-card {
         background-color: #262730;
@@ -42,6 +48,7 @@ st.markdown("""
         font-size: 0.9em;
         margin-bottom: 20px;
     }
+    /* Button Tweaks */
     .stButton button {
         width: 100%;
     }
@@ -127,8 +134,8 @@ def get_gemini_response(filters):
 
 # --- 3. Sidebar Controls ---
 with st.sidebar:
-    st.title("🎓 Purdue AI Policy Mapper")
-    st.markdown("Explore broad career trajectories and the certifications that make them possible.")
+    st.title("Purdue AI Policy Mapper")
+    st.markdown("Explore broad career trajectories and the certifications that make them possible. Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research")
     
     st.divider()
     
