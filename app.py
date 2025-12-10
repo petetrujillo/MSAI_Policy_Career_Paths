@@ -216,7 +216,7 @@ with st.sidebar:
         
         st.markdown("""
         **Project:** Purdue AI Career Mapper  
-        **Model Engine:** Google Gemini 1.5 Flash  
+        **Model Engine:** Google Gemini 2.5 Flash  
         **Purpose:** To map academic degrees to industry roles and required certifications.
 
         #### 🎯 Intended Use
