@@ -169,7 +169,7 @@ with st.sidebar:
         # Hunter Filters
         st.subheader("🎯 Career Scope")
         f_industry = st.selectbox("Target Sector", 
-            ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
+            ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Gaming", "Entertainment", "Non-Profit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
         
         f_style = st.selectbox("Role Function", 
             ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety", "Engineering & Dev", "Data Science"])
