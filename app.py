@@ -12,9 +12,7 @@ st.set_page_config(layout="wide", page_title="Purdue AI Policy Career Mapper")
 # --- CSS for Styling ---
 st.markdown("""
 <style>
-    /* ADAPTIVE CARD STYLING 
-       Uses Streamlit's native CSS variables to switch between Light/Dark modes automatically.
-    */
+    /* ADAPTIVE CARD STYLING */
     .deep-dive-card {
         background-color: var(--secondary-background-color);
         color: var(--text-color);
@@ -63,7 +61,6 @@ def get_gemini_response(filters):
 
     genai.configure(api_key=api_key)
 
-    # --- UPDATED LOGIC FOR BROAD CAREER PATHS ---
     system_instruction = f"""
     You are a Career Strategist specialized in the "Purdue Masters of AI Policy and Management" program.
     
@@ -166,7 +163,6 @@ if data:
     connections = data['connections']
 
     # --- CENTER COLUMN: Graph ---
-    # Build Graph
     nodes = []
     edges = []
     node_ids = set()
@@ -190,7 +186,7 @@ if data:
                 label=item['name'], 
                 size=30, 
                 color="#FF4B4B", 
-                font={'color': 'white'}, # Ensure text is white
+                font={'color': 'white'}, 
                 title=item['reason']
             ))
             node_ids.add(item['name'])
@@ -211,7 +207,7 @@ if data:
                         label=sub['name'], 
                         size=20, 
                         color="#00C0F2", 
-                        font={'color': 'white'}, # Ensure text is white
+                        font={'color': 'white'}, 
                         title=f"Cert for {item['name']}: {sub['reason']}",
                         shape="diamond"
                     ))
@@ -225,7 +221,8 @@ if data:
                     dashes=True
                 ))
 
-    # --- CONFIG UPDATED: REMOVED BACKGROUND COLOR ---
+    # --- CONFIG FIX: HARDCODE BLACK BACKGROUND ---
+    # This ensures white text is always visible, even in Light Mode
     config = Config(
         width=1200,
         height=600,
@@ -234,18 +231,15 @@ if data:
         hierarchical=False, 
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
-        collapsible=True
-        # backgroundColor is removed so it inherits default (often white/transparent)
+        collapsible=True,
+        backgroundColor="#0e1117"  # Hardcoded Dark Gray/Black
     )
 
     col_main, col_right = st.columns([3, 1])
     
     with col_main:
         st.subheader(f"Career Map: {filters['industry']}")
-        
-        # Native Streamlit Warning (Adaptive)
         st.warning("⚠️ **AI Generated Advisory:** Verify all role availability and requirements independently.")
-        
         clicked_node = agraph(nodes=nodes, edges=edges, config=config)
 
     # --- RIGHT COLUMN: Details ---
@@ -279,7 +273,7 @@ if data:
             if not found:
                 display_text = "Node details not found."
 
-        # Adaptive Card using new CSS
+        # Adaptive Card (The Sidebar uses System Theme)
         st.markdown(f"""
         <div class="deep-dive-card">
             <div class="highlight-title">{selected_node_name}</div>
