@@ -7,7 +7,7 @@ import google.generativeai as genai
 from streamlit_agraph import agraph, Node, Edge, Config
 
 # --- Page Configuration ---
-st.set_page_config(layout="wide", page_title="Career Graph Explorer")
+st.set_page_config(layout="wide", page_title="Purdue AI Policy Career Mapper")
 
 # --- CSS for Styling ---
 st.markdown("""
@@ -41,15 +41,7 @@ st.markdown("""
         color: #ffcfcf;
         font-size: 0.9em;
         margin-bottom: 20px;
-        display: flex;
-        align-items: center;
     }
-    .cost-counter {
-        font-size: 0.8em;
-        color: #00FF00;
-        margin-top: 10px;
-    }
-    /* Button Tweaks */
     .stButton button {
         width: 100%;
     }
@@ -57,21 +49,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 1. State Management ---
-if 'mode' not in st.session_state:
-    st.session_state.mode = "Discovery" 
-if 'search_term' not in st.session_state:
-    st.session_state.search_term = "OpenAI"
-if 'resume_text' not in st.session_state:
-    st.session_state.resume_text = ""
 if 'graph_data' not in st.session_state:
     st.session_state.graph_data = None
-if 'history' not in st.session_state:
-    st.session_state.history = []
 if 'token_usage' not in st.session_state:
     st.session_state.token_usage = 0
+if 'should_fetch' not in st.session_state:
+    st.session_state.should_fetch = False
 
 # --- 2. Google Gemini Setup ---
-def get_gemini_response(mode, query, filters):
+def get_gemini_response(filters):
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
     except Exception:
@@ -83,82 +69,52 @@ def get_gemini_response(mode, query, filters):
 
     genai.configure(api_key=api_key)
 
-    filter_text = f"""
-    STRICT CONSTRAINTS:
-    - Target Industry: {filters['industry']}
-    - Company Size Preference: {filters['size']}
-    - Work Style: {filters['style']}
+    # --- UPDATED LOGIC FOR BROAD CAREER PATHS ---
+    system_instruction = f"""
+    You are a Career Strategist specialized in the "Purdue Masters of AI Policy and Management" program.
+    
+    CONTEXT:
+    The user is a graduate looking for realistic career entry points in: {filters['industry']}.
+    The user is open to roles in: {filters['style']}.
+    
+    CRITICAL INSTRUCTION:
+    - DO NOT limit results to "AI Governance" or "Policy" titles. 
+    - A Master's degree alone is rarely a golden ticket. You must find roles where this degree acts as a specific *differentiator* (e.g., Product Management, Compliance, Strategy, Risk, Technical Sales).
+    - The "Certifications" layer is VITAL. It must answer: "What specific credential makes this Policy grad hireable for this specific hard-skill role?"
+
+    TASK:
+    1. CENTER NODE: "Purdue AI Policy Grad"
+    2. LAYER 1 (Connections): Identify 5 distinct, broad Job Titles. Mix "Direct" matches (Policy) with "Pivot" matches (e.g. PM, Risk Analyst) suitable for the {filters['industry']} sector.
+    3. LAYER 2 (Sub-connections): For EACH Job Title, identify 2-3 specific Professional Certifications (e.g., CIPP, CISSP, PMP, AWS Certified Practitioner) that provide the hard credibility needed to land that job.
+
+    OUTPUT JSON STRUCTURE:
+    {{
+        "center_node": {{
+            "name": "Purdue MS AI Policy",
+            "type": "Degree",
+            "mission": "Your degree is the foundation, but certifications are your bridge to industry.",
+            "positive_news": "Versatile degree for hybrid roles.",
+            "red_flags": "Requires hard-skill proof (certs) to compete."
+        }},
+        "connections": [
+            {{
+                "name": "Job Title A",
+                "reason": "Why is this a good fit? (e.g., 'Uses your ethics background to manage product risk')",
+                "sub_connections": [
+                    {{"name": "Certification X", "reason": "Why this specific cert? (e.g., 'Proves you know the privacy laws')"}},
+                    {{"name": "Certification Y", "reason": "Why this specific cert? (e.g., 'Proves technical competency')"}}
+                ]
+            }}
+        ]
+    }}
     """
-
-    if mode == "Resume Match":
-        # --- PROMPT B: RESUME ALIGNMENT ---
-        system_instruction = f"""
-        You are a Strategic Career Agent. Analyze the user's RESUME text against constraints.
-        
-        {filter_text}
-        
-        TASK:
-        1. Identify Top 5 Companies that fit this resume AND constraints.
-        2. For EACH company, identify 2-3 specific SKILLS from the resume that create the match.
-        
-        OUTPUT JSON STRUCTURE:
-        {{
-            "center_node": {{
-                "name": "My Career",
-                "type": "Candidate",
-                "mission": "Based on your resume, these are your strongest alignment targets.",
-                "positive_news": "Your Top Skills: [List top 3 skills found in resume]",
-                "red_flags": "Gaps/Areas to Improve: [List 1-2 potential gaps]"
-            }},
-            "connections": [
-                {{
-                    "name": "Target Company",
-                    "reason": "Why it fits?",
-                    "sub_connections": [
-                        {{"name": "Matched Skill 1", "reason": "Relevance"}},
-                        {{"name": "Matched Skill 2", "reason": "Relevance"}}
-                    ]
-                }}
-            ]
-        }}
-        """
-        user_prompt = f"{system_instruction}\n\nRESUME TEXT:\n{query}"
-
-    else:
-        # --- PROMPT A: DISCOVERY ---
-        system_instruction = f"""
-        You are a Strategic Career Intelligence Engine. 
-        Analyze the user's input (Company or Job Title) and return a 3-layer network graph.
-
-        {filter_text}
-
-        PART 1: CENTER NODE (Layer 0) - Provide 'mission', 'positive_news', 'red_flags'.
-        PART 2: DIRECT CONNECTIONS (Layer 1) - Identify exactly 10 related entities matching constraints.
-        PART 3: SECONDARY CONNECTIONS (Layer 2) - For EACH Layer 1 entity, identify 2 top connections.
-
-        OUTPUT JSON STRUCTURE:
-        {{
-            "center_node": {{ "name": "Corrected Name", "type": "Company/Job", "mission": "...", "positive_news": "...", "red_flags": "..." }},
-            "connections": [
-                {{
-                    "name": "Layer 1 Company",
-                    "reason": "Why related?",
-                    "sub_connections": [
-                        {{"name": "Layer 2 Company A", "reason": "Reason"}},
-                        {{"name": "Layer 2 Company B", "reason": "Reason"}}
-                    ]
-                }}
-            ]
-        }}
-        """
-        user_prompt = f"{system_instruction}\n\nUser Input: '{query}'"
-
+    
     try:
         model = genai.GenerativeModel('gemini-flash-latest')
-        with st.spinner(f"🔍 Analyzing..."):
-            response = model.generate_content(user_prompt)
+        with st.spinner(f"🔍 Mapping Career Trajectories..."):
+            response = model.generate_content(system_instruction)
         
-        input_tokens = len(user_prompt) / 4
+        input_tokens = len(system_instruction) / 4
         output_tokens = len(response.text) / 4
         st.session_state.token_usage += (input_tokens + output_tokens)
 
@@ -169,104 +125,45 @@ def get_gemini_response(mode, query, filters):
         st.error(f"AI Analysis Error: {e}")
         return None
 
-def generate_email_draft(company, mission, user_resume=""):
-    """Helper to generate a cold email using AI"""
-    try:
-        api_key = st.secrets["GEMINI_API_KEY"] if "GEMINI_API_KEY" in st.secrets else os.environ.get("GEMINI_API_KEY")
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-flash-latest')
-        
-        context = f"My Resume Summary: {user_resume[:500]}..." if user_resume else "I am a passionate professional."
-        
-        prompt = f"""
-        Write a short, punchy (under 150 words) cold outreach email to a recruiter at {company}.
-        Context on Company: {mission}
-        Context on Me: {context}
-        Tone: Professional, enthusiastic, but not cringey.
-        Output: Just the email body.
-        """
-        response = model.generate_content(prompt)
-        return response.text
-    except:
-        return "Could not generate draft. Try again."
-
 # --- 3. Sidebar Controls ---
 with st.sidebar:
-    st.title("🕸️ Career Explorer")
+    st.title("🎓 Purdue AI Policy Mapper")
+    st.markdown("Explore broad career trajectories and the certifications that make them possible.")
     
-    # 1. Mode Switcher
-    mode = st.radio("Select Mode:", ["Discovery", "Resume Match"], horizontal=True)
-    st.session_state.mode = mode
-
-    # 2. Input Section
-    if mode == "Discovery":
-        st.subheader("🔍 Search")
-        user_input = st.text_input("Enter Seed Company/Role:", value=st.session_state.search_term)
-    else:
-        st.subheader("📄 Resume Match")
-        st.info("🔒 Data is analyzed transiently and not stored.")
-        user_resume = st.text_area("Paste Resume Text:", height=150, value=st.session_state.resume_text)
-
     st.divider()
     
-    # 3. Hunter Filters
-    st.subheader("🎯 Hunter Filters")
-    f_industry = st.selectbox("Target Industry", 
-        ["Any", "SaaS / Software", "Fintech", "HealthTech", "Climate Tech", "E-Commerce", "Gaming", "Crypto/Web3", "Defense/Aerospace"])
-    f_size = st.selectbox("Company Size", 
-        ["Any", "Early Stage (<50 employees)", "Growth Stage (50-500)", "Large Corp (500+)"])
-    f_style = st.selectbox("Work Style", 
-        ["Any", "Remote Friendly", "In-Office / Hybrid"])
+    # Hunter Filters
+    st.subheader("🎯 Career Scope")
+    f_industry = st.selectbox("Target Sector", 
+        ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
+    
+    f_style = st.selectbox("Role Function", 
+        ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety"])
 
-    # 4. Primary Action
-    if st.button("🚀 Launch Analysis", type="primary"):
-        st.session_state.graph_data = None
-        if mode == "Discovery":
-            st.session_state.search_term = user_input
-        else:
-            st.session_state.resume_text = user_resume
+    st.divider()
+
+    # Primary Action
+    if st.button("🚀 Generate Paths", type="primary", key="launch_btn"):
+        st.session_state.should_fetch = True
+        st.session_state.graph_data = None # Clear old data on new click
         st.rerun()
 
-    # 5. Clear
-    if st.button("🗑️ Clear Session"):
-        st.session_state.history = []
+    # Clear
+    if st.button("🗑️ Clear Map"):
         st.session_state.graph_data = None
-        st.session_state.search_term = "OpenAI"
-        st.session_state.resume_text = ""
         st.session_state.token_usage = 0
+        st.session_state.should_fetch = False
         st.rerun()
-
-    cost = (st.session_state.token_usage / 1000000) * 0.50
-    st.markdown(f"<div class='cost-counter'>💰 Est. Session Cost: ${cost:.5f}</div>", unsafe_allow_html=True)
 
 # --- 4. Main Logic ---
-filters = {"industry": f_industry, "size": f_size, "style": f_style}
+filters = {"industry": f_industry, "style": f_style}
 
-if st.session_state.mode == "Discovery":
-    active_query = st.session_state.search_term
-elif st.session_state.mode == "Resume Match":
-    active_query = st.session_state.resume_text
-    if not active_query:
-        st.info("👈 Please paste your resume in the sidebar to begin.")
-        st.stop()
-
-# Auto-Fetch Logic
-should_fetch = False
-if st.session_state.graph_data is None:
-    should_fetch = True
-elif st.session_state.mode == "Discovery" and st.session_state.graph_data.get('center_node', {}).get('name') != active_query:
-    should_fetch = True
-
-if should_fetch:
-    data = get_gemini_response(st.session_state.mode, active_query, filters)
+if st.session_state.should_fetch:
+    data = get_gemini_response(filters)
     if data:
         st.session_state.graph_data = data
-        if st.session_state.mode == "Discovery":
-            real_name = data['center_node']['name']
-            if real_name not in st.session_state.history:
-                st.session_state.history.append(real_name)
-            if active_query != real_name:
-                st.session_state.search_term = real_name
+        st.session_state.should_fetch = False # Reset
+        st.rerun()
 
 # --- 5. Layout Rendering ---
 data = st.session_state.graph_data
@@ -275,40 +172,33 @@ if data:
     center_info = data['center_node']
     connections = data['connections']
 
-    # --- CENTER COLUMN: Warning & Graph ---
-    st.markdown("""
-    <div class="warning-box">
-        <div>⚠️ <b>AI Generated Advisory:</b> Information is generated by Gemini Pro. Verify all role availability, financial health, and company details independently.</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    # --- CENTER COLUMN: Graph ---
     # Build Graph
     nodes = []
     edges = []
     node_ids = set()
 
-    # Center Node
+    # Center Node (The Degree)
     nodes.append(Node(
         id=center_info['name'], 
         label=center_info['name'], 
         size=45, 
-        color="#FF4B4B",
+        color="#B19CD9", # Purdue-ish or Academic color
         font={'color': 'white'},
-        url="javascript:void(0);"
+        shape="dot"
     ))
     node_ids.add(center_info['name'])
 
     for item in connections:
-        # Layer 1
+        # Layer 1: Job Titles
         if item['name'] not in node_ids:
             nodes.append(Node(
                 id=item['name'], 
                 label=item['name'], 
-                size=25, 
-                color="#00C0F2",
+                size=30, 
+                color="#FF4B4B", # Job Title Color
                 font={'color': 'white'},
-                title=item['reason'],
-                url="javascript:void(0);"
+                title=item['reason']
             ))
             node_ids.add(item['name'])
         
@@ -316,21 +206,21 @@ if data:
             source=center_info['name'], 
             target=item['name'], 
             color="#808080",
-            width=2
+            width=3
         ))
 
-        # Layer 2
+        # Layer 2: Certifications
         if 'sub_connections' in item:
             for sub in item['sub_connections']:
                 if sub['name'] not in node_ids:
                     nodes.append(Node(
                         id=sub['name'], 
                         label=sub['name'], 
-                        size=15, 
-                        color="#1DB954", 
+                        size=20, 
+                        color="#00C0F2", # Certification Color
                         font={'color': 'white'},
-                        title=f"Connected to {item['name']}",
-                        url="javascript:void(0);"
+                        title=f"Cert for {item['name']}: {sub['reason']}",
+                        shape="diamond" # Different shape for certs
                     ))
                     node_ids.add(sub['name'])
                 
@@ -338,83 +228,78 @@ if data:
                     source=item['name'], 
                     target=sub['name'], 
                     color="#404040", 
-                    width=1
+                    width=1,
+                    dashes=True # Dashed line for supporting certs
                 ))
 
     config = Config(
-        width=1400,
-        height=550,
-        directed=False, 
+        width=1200,
+        height=600,
+        directed=True, 
         physics=True, 
-        hierarchical=False,
+        hierarchical=False, 
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
-        collapsible=False
+        collapsible=True
     )
 
-    col_main, col_right = st.columns([2.5, 1])
+    col_main, col_right = st.columns([3, 1])
     
     with col_main:
+        st.subheader(f"Career Map: {filters['industry']}")
         clicked_node = agraph(nodes=nodes, edges=edges, config=config)
 
-    # --- RIGHT COLUMN: Tabs ---
+    # --- RIGHT COLUMN: Details ---
     with col_right:
-        # TABS: Dossier | Actions | Network
-        tab_dossier, tab_actions, tab_net = st.tabs(["📂 Dossier", "⚡ Actions", "🕸️ Network"])
+        st.subheader("📝 Path Details")
         
-        with tab_dossier:
-            st.subheader(f"{center_info['name']}")
-            raw_html = f"""
-                <div class="deep-dive-card">
-                    <p>
-                        <span class="highlight-title">📌 Overview</span><br>
-                        {center_info['mission']}
-                    </p>
-                    <p>
-                        <span class="highlight-title">🚀 Signals</span><br>
-                        {center_info['positive_news']}
-                    </p>
-                    <p>
-                        <span class="highlight-title">🚩 Red Flags</span><br>
-                        {center_info['red_flags']}
-                    </p>
-                </div>
-            """
-            st.markdown(textwrap.dedent(raw_html), unsafe_allow_html=True)
-
-        with tab_actions:
-            st.subheader("Take Action")
-            st.markdown("Don't just look, apply.")
-            
-            # 1. SMART LINKS
-            company_safe = urllib.parse.quote(center_info['name'])
-            st.link_button(f"💼 Jobs at {center_info['name']} (LinkedIn)", 
-                           f"https://www.linkedin.com/jobs/search/?keywords={company_safe}")
-            st.link_button(f"📰 News about {center_info['name']} (Google)", 
-                           f"https://www.google.com/search?q={company_safe}+news&tbm=nws")
-            
-            st.divider()
-            
-            # 2. EMAIL GENERATOR
-            st.write("**📧 Cold Outreach Generator**")
-            if st.button("Draft Email to Recruiter"):
-                with st.spinner("Writing draft..."):
-                    draft = generate_email_draft(center_info['name'], center_info['mission'], st.session_state.resume_text)
-                    st.text_area("Copy this:", value=draft, height=200)
-
-        with tab_net:
-            st.write("### Connections")
+        # Determine what to show based on click
+        selected_node_name = clicked_node if clicked_node else center_info['name']
+        
+        # Find the node data
+        display_text = ""
+        display_sub = ""
+        
+        if selected_node_name == center_info['name']:
+            display_text = center_info['mission']
+            display_sub = "Select a red node (Job) to see details, or a blue diamond (Cert) for requirements."
+        else:
+            # Search in connections
+            found = False
             for c in connections:
-                st.markdown(f"**{c['name']}**")
-                st.caption(f"{c['reason']}")
-                st.divider()
+                if c['name'] == selected_node_name:
+                    display_text = c['reason']
+                    display_sub = "Top Recommended Certifications:"
+                    for sub in c.get('sub_connections', []):
+                        display_sub += f"\n- {sub['name']}"
+                    found = True
+                    break
+                # Search in sub-connections
+                for sub in c.get('sub_connections', []):
+                    if sub['name'] == selected_node_name:
+                        display_text = sub['reason']
+                        display_sub = f"Critical credibility booster for: {c['name']}"
+                        found = True
+                        break
+            if not found:
+                display_text = "Node details not found."
 
-    # --- Interaction Handler ---
-    if clicked_node and clicked_node != center_info['name']:
-        st.session_state.mode = "Discovery"
-        st.session_state.search_term = clicked_node
-        st.session_state.graph_data = None 
-        st.rerun()
+        st.info(f"**{selected_node_name}**")
+        st.write(display_text)
+        if display_sub:
+            st.markdown(f"_{display_sub}_")
+            
+        st.divider()
+        if selected_node_name != center_info['name']:
+            query = urllib.parse.quote(f"{selected_node_name} {filters['industry']} certification requirements")
+            st.link_button("🔎 Research Requirements", f"https://www.google.com/search?q={query}")
 
 else:
-    st.info("Waiting for input...")
+    # Landing State
+    st.markdown("""
+    <div style="text-align: center; padding: 50px;">
+        <h1>🎓 Welcome, Purdue Graduates</h1>
+        <p>Select your target industry and preferred role function on the left.</p>
+        <p style="font-size: 0.9em; color: #888;">We will map diverse career paths and the specific certifications you need to be credible in them.</p>
+    </div>
+    """, unsafe_allow_html=True)
