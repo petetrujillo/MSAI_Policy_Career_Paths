@@ -135,8 +135,9 @@ def get_gemini_response(filters):
 # --- 3. Sidebar Controls ---
 with st.sidebar:
     st.title("Purdue AI Policy Mapper")
-    st.markdown("Explore broad career trajectories and the certifications that make them possible. Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research")
-    
+    st.markdown("Explore broad career trajectories and the certifications that could support them.")
+    st.markdown("Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research!")
+
     st.divider()
     
     # Hunter Filters
@@ -190,7 +191,7 @@ if data:
         id=center_info['name'], 
         label=center_info['name'], 
         size=45, 
-        color="#B19CD9", # Purdue-ish or Academic color
+        color="#B19CD9", 
         font={'color': 'white'},
         shape="dot"
     ))
@@ -203,8 +204,8 @@ if data:
                 id=item['name'], 
                 label=item['name'], 
                 size=30, 
-                color="#FF4B4B", # Job Title Color
-                font={'color': 'white'},
+                color="#FF4B4B", 
+                font={'color': 'white'}, # Ensure text is white
                 title=item['reason']
             ))
             node_ids.add(item['name'])
@@ -224,10 +225,10 @@ if data:
                         id=sub['name'], 
                         label=sub['name'], 
                         size=20, 
-                        color="#00C0F2", # Certification Color
-                        font={'color': 'white'},
+                        color="#00C0F2", 
+                        font={'color': 'white'}, # Ensure text is white
                         title=f"Cert for {item['name']}: {sub['reason']}",
-                        shape="diamond" # Different shape for certs
+                        shape="diamond"
                     ))
                     node_ids.add(sub['name'])
                 
@@ -236,9 +237,10 @@ if data:
                     target=sub['name'], 
                     color="#404040", 
                     width=1,
-                    dashes=True # Dashed line for supporting certs
+                    dashes=True
                 ))
 
+    # --- CONFIG UPDATE HERE ---
     config = Config(
         width=1200,
         height=600,
@@ -247,7 +249,8 @@ if data:
         hierarchical=False, 
         nodeHighlightBehavior=True,
         highlightColor="#F7A7A6",
-        collapsible=True
+        collapsible=True,
+        backgroundColor="#000000"  # <--- This fixes the white box
     )
 
     col_main, col_right = st.columns([3, 1])
@@ -260,10 +263,8 @@ if data:
     with col_right:
         st.subheader("📝 Path Details")
         
-        # Determine what to show based on click
         selected_node_name = clicked_node if clicked_node else center_info['name']
         
-        # Find the node data
         display_text = ""
         display_sub = ""
         
@@ -271,7 +272,6 @@ if data:
             display_text = center_info['mission']
             display_sub = "Select a red node (Job) to see details, or a blue diamond (Cert) for requirements."
         else:
-            # Search in connections
             found = False
             for c in connections:
                 if c['name'] == selected_node_name:
@@ -281,7 +281,6 @@ if data:
                         display_sub += f"\n- {sub['name']}"
                     found = True
                     break
-                # Search in sub-connections
                 for sub in c.get('sub_connections', []):
                     if sub['name'] == selected_node_name:
                         display_text = sub['reason']
