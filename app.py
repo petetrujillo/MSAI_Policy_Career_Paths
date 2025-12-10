@@ -137,7 +137,7 @@ with st.sidebar:
     with tab_main:
         st.markdown("This is a free to use tool, that helps fellow MSAI Boilermakers investigate possible career trajectories and the certifications that support them.")
         st.markdown("This tool uses GEMINI and may have errors, but should spark your own research.")
-         st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
+        st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
         
         st.divider()
         
