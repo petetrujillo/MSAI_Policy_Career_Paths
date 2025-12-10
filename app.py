@@ -129,49 +129,68 @@ def get_gemini_response(filters):
 # --- 3. Sidebar Controls ---
 with st.sidebar:
     st.title("Purdue AI Policy Mapper")
-    st.markdown("Explore broad career trajectories and the certifications that could support them. Note: this is generated using Gemini LLM, so there can be mistakes, but the results may spark your own inspiration to do more of your own research!")
-    st.divider()
     
-    # Hunter Filters
-    st.subheader("🎯 Career Scope")
-    f_industry = st.selectbox("Target Sector", 
-        ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
+    # --- TABS FOR ORGANIZATION ---
+    tab_main, tab_about = st.tabs(["🚀 Controls", "ℹ️ About"])
     
-    f_style = st.selectbox("Role Function", 
-        ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety"])
+    # --- TAB 1: MAIN CONTROLS ---
+    with tab_main:
+        st.markdown("Generate broad career trajectories and the certifications that support them.")
+        st.caption("Note: Results are AI-generated (Gemini) and may require verification.")
+        
+        st.divider()
+        
+        # Hunter Filters
+        st.subheader("🎯 Career Scope")
+        f_industry = st.selectbox("Target Sector", 
+            ["Any", "Government / Public Sector", "Big Tech (FAANG)", "Consulting (Big 4)", "Nonfit / NGO", "Defense & Aerospace", "Financial Services", "Healthcare", "Consumer Tech"])
+        
+        f_style = st.selectbox("Role Function", 
+            ["Any", "Product & Strategy", "Risk & Compliance", "Policy & Research", "Technical Program Mgmt", "Trust & Safety"])
 
-    st.divider()
+        st.divider()
 
-    # Primary Action
-    if st.button("🚀 Generate Paths", type="primary", key="launch_btn"):
-        st.session_state.should_fetch = True
-        st.session_state.graph_data = None 
-        st.rerun()
+        # Primary Action
+        if st.button("🚀 Generate Paths", type="primary", key="launch_btn"):
+            st.session_state.should_fetch = True
+            st.session_state.graph_data = None 
+            st.rerun()
 
-    # Clear
-    if st.button("🗑️ Clear Map"):
-        st.session_state.graph_data = None
-        # Note: We do NOT reset session_cost here so you can track total spend.
-        st.session_state.should_fetch = False
-        st.rerun()
-    
-    # --- COST TRACKER ---
-    st.divider()
-    st.caption("Session Monitor")
-    st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
+        # Clear
+        if st.button("🗑️ Clear Map"):
+            st.session_state.graph_data = None
+            st.session_state.should_fetch = False
+            st.rerun()
+        
+        # Cost Tracker
+        st.divider()
+        st.caption("Session Monitor")
+        st.metric("Total Cost", f"${st.session_state.session_cost:.3f}", help="Calculated at ~$0.003 per query")
 
-    # --- BUY ME A COFFEE LINK ---
-    st.divider()
-    st.markdown(
-        """
-        <div style="text-align: center;">
-            <a href="https://buymeacoffee.com/petetru" target="_blank">
-                <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 162px !important;" >
-            </a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # --- TAB 2: ABOUT & LINKS ---
+    with tab_about:
+        st.subheader("About the Creator")
+        st.markdown("""
+        Built by **Pete Trujillo** to help Purdue students visualize career possibilities beyond standard paths.
+        """)
+        
+        st.markdown("### 🌐 Connect")
+        st.link_button("🏠 PeteTrujillo.com", "https://petetrujillo.com")
+        st.link_button("🍀 DoubleLucky.ai (Non-Profit)", "https://doublelucky.ai")
+        
+        st.divider()
+        
+        st.markdown("### ☕ Support the Project")
+        st.markdown(
+            """
+            <div style="text-align: center;">
+                <a href="https://buymeacoffee.com/petetru" target="_blank">
+                    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 162px !important;" >
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 # --- 4. Main Logic ---
 filters = {"industry": f_industry, "style": f_style}
